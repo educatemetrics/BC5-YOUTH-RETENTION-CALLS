@@ -1,0 +1,899 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E!BA Retention Tracker</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #0F6A8C 0%, #0e313e 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 20px 30px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            border-left: 6px solid #870101;
+        }
+
+        .header h1 {
+            color: #870101;
+            font-size: 28px;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .header-controls {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-top: 15px;
+        }
+
+        .venue-select {
+            flex: 1;
+            min-width: 250px;
+            padding: 12px 16px;
+            border: 2px solid #0F6A8C;
+            border-radius: 8px;
+            font-size: 15px;
+            background: white;
+            cursor: pointer;
+            transition: border-color 0.2s;
+            color: #0e313e;
+        }
+
+        .venue-select:focus {
+            outline: none;
+            border-color: #870101;
+        }
+
+        .refresh-btn {
+            padding: 12px 24px;
+            background: #870101;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            cursor: pointer;
+            transition: background 0.2s;
+            font-weight: 600;
+        }
+
+        .refresh-btn:hover {
+            background: #A03434;
+        }
+
+        .refresh-btn:disabled {
+            background: #666666;
+            cursor: not-allowed;
+        }
+
+        .last-updated {
+            color: #666666;
+            font-size: 14px;
+            font-style: italic;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .metric-card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+        }
+
+        .metric-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .metric-label {
+            font-size: 13px;
+            color: #666666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .metric-value {
+            font-size: 32px;
+            font-weight: 700;
+        }
+
+        /* Educate! Brand Colors for Metrics */
+        .metric-card.absent { 
+            border-left: 4px solid #A03434; /* Red variation */
+        }
+        .metric-card.absent .metric-value { color: #A03434; }
+        
+        .metric-card.called { 
+            border-left: 4px solid #4D889D; /* Blue variation */
+        }
+        .metric-card.called .metric-value { color: #4D889D; }
+        
+        .metric-card.reached { 
+            border-left: 4px solid #0e313e; /* Navy */
+        }
+        .metric-card.reached .metric-value { color: #0e313e; }
+        
+        .metric-card.promised { 
+            border-left: 4px solid #f4b14d; /* Yellow variation */
+        }
+        .metric-card.promised .metric-value { color: #f4b14d; }
+        
+        .metric-card.refused { 
+            border-left: 4px solid #870101; /* Primary Red */
+        }
+        .metric-card.refused .metric-value { color: #870101; }
+        
+        .metric-card.returned { 
+            border-left: 4px solid #4F9262; /* Green variation */
+        }
+        .metric-card.returned .metric-value { color: #4F9262; }
+
+        .data-section {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .section-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #870101;
+        }
+
+        .search-box {
+            padding: 10px 16px;
+            border: 2px solid #0F6A8C;
+            border-radius: 8px;
+            font-size: 14px;
+            min-width: 250px;
+        }
+
+        .search-box:focus {
+            outline: none;
+            border-color: #870101;
+        }
+
+        .youth-table {
+            width: 100%;
+            border-collapse: collapse;
+            overflow-x: auto;
+            display: block;
+        }
+
+        .youth-table thead {
+            background: #f7fafc;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .youth-table th {
+            padding: 12px;
+            text-align: left;
+            font-size: 13px;
+            font-weight: 600;
+            color: #0e313e;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 2px solid #0F6A8C;
+        }
+
+        .youth-table td {
+            padding: 12px;
+            border-bottom: 1px solid #e2e8f0;
+            font-size: 14px;
+            color: #0e313e;
+        }
+
+        .youth-table tbody tr:hover {
+            background: #f7fafc;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            text-align: center;
+        }
+
+        /* Educate! Brand Colors for Status Badges */
+        .status-not-called { 
+            background: #fde8e8; 
+            color: #870101; 
+        }
+        .status-called { 
+            background: #e3f2f7; 
+            color: #0F6A8C; 
+        }
+        .status-reached { 
+            background: #d4e4e9; 
+            color: #0e313e; 
+        }
+        .status-promised { 
+            background: #fef5e7; 
+            color: #F1A01B; 
+        }
+        .status-refused { 
+            background: #fde0e0; 
+            color: #A03434; 
+        }
+        .status-returned { 
+            background: #e8f5ed; 
+            color: #008148; 
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666666;
+        }
+
+        .error {
+            background: #fff5f5;
+            border: 2px solid #A03434;
+            color: #870101;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+
+        .error strong {
+            display: block;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #666666;
+        }
+
+        .empty-state-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+            opacity: 0.3;
+        }
+
+        .date-filter {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .date-btn {
+            padding: 8px 16px;
+            border: 2px solid #0F6A8C;
+            background: white;
+            color: #0F6A8C;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+
+        .date-btn.active {
+            background: #870101;
+            color: white;
+            border-color: #870101;
+        }
+
+        .date-btn:hover:not(.active) {
+            background: #f7fafc;
+        }
+
+        @media (max-width: 768px) {
+            .header-controls {
+                flex-direction: column;
+            }
+            
+            .venue-select,
+            .search-box,
+            .refresh-btn {
+                width: 100%;
+            }
+
+            .metrics-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .youth-table {
+                font-size: 12px;
+            }
+
+            .youth-table th,
+            .youth-table td {
+                padding: 8px;
+            }
+
+            .section-header {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .search-box {
+                width: 100%;
+            }
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #870101;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .educate-logo {
+            color: #0F6A8C;
+            font-weight: 700;
+        }
+
+        /* Password Protection Styles */
+        .password-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #0F6A8C 0%, #0e313e 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+
+        .password-overlay.hidden {
+            display: none;
+        }
+
+        .password-modal {
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+        }
+
+        .password-input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #0F6A8C;
+            border-radius: 8px;
+            font-size: 15px;
+            margin-bottom: 15px;
+            box-sizing: border-box;
+        }
+
+        .password-input:focus {
+            outline: none;
+            border-color: #870101;
+        }
+
+        .password-submit {
+            width: 100%;
+            padding: 12px 24px;
+            background: #870101;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+
+        .password-submit:hover {
+            background: #A03434;
+        }
+
+        .password-error {
+            color: #870101;
+            margin-top: 10px;
+            font-size: 14px;
+        }
+
+        /* Call Form Button */
+        .call-form-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 20px;
+            background: #4F9262;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background 0.2s;
+            font-weight: 600;
+            text-decoration: none;
+        }
+
+        .call-form-btn:hover {
+            background: #008148;
+        }
+
+        .call-form-btn:disabled {
+            background: #666666;
+            cursor: not-allowed;
+        }
+
+        .youth-id-link {
+            color: #0F6A8C;
+            font-weight: 700;
+            cursor: pointer;
+            text-decoration: none;
+        }
+
+        .youth-id-link:hover {
+            color: #870101;
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <!-- Password Protection Overlay -->
+    <div id="passwordOverlay" class="password-overlay">
+        <div class="password-modal">
+            <h2 style="color: #870101; margin-bottom: 20px;">🔒 E!BA Retention Tracker</h2>
+            <p style="color: #666666; margin-bottom: 20px;">Enter password to access dashboard</p>
+            <input 
+                type="password" 
+                id="passwordInput" 
+                class="password-input" 
+                placeholder="Enter password"
+                autocomplete="current-password"
+            >
+            <button id="passwordSubmit" class="password-submit">Access Dashboard</button>
+            <div id="passwordError" class="password-error"></div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="header">
+            <h1>📊 E!BA Retention Tracker</h1>
+            <div class="header-controls">
+                <select id="venueSelect" class="venue-select">
+                    <option value="">Loading venues...</option>
+                </select>
+                <div class="date-filter">
+                    <button class="date-btn" id="yesterdayBtn">Yesterday</button>
+                    <button class="date-btn active" id="todayBtn">Today</button>
+                </div>
+                <button id="refreshBtn" class="refresh-btn">🔄 Refresh</button>
+                <span class="last-updated" id="lastUpdated"></span>
+            </div>
+        </div>
+
+        <div id="metricsContainer"></div>
+        <div id="dataContainer"></div>
+    </div>
+
+    <script>
+        // Password Protection
+        const CORRECT_PASSWORD = 'foa2026';
+        const PASSWORD_STORAGE_KEY = 'eba_retention_auth';
+        
+        // Configuration - Your Apps Script API URL
+        const DATA_URL = 'https://script.google.com/macros/s/AKfycbyC7r_pUTVBJFpiKTcWx6_HsEVi6oH9YB2QlBCvwnVmGY3wvzsw9B6cgTJqgwbmOwqR/exec';
+        
+        // SurveyCTO Form URL
+        const CALL_FORM_BASE_URL = 'https://expeducate.surveycto.com/collect/eba_2025_youth_absent_flow_up_script?caseid=';
+        
+        let allData = [];
+        let filteredData = [];
+        let currentVenue = '';
+        let currentDate = 'today';
+
+        // Check password on load
+        document.addEventListener('DOMContentLoaded', () => {
+            checkPassword();
+            setupPasswordListener();
+        });
+
+        function checkPassword() {
+            const savedPassword = localStorage.getItem(PASSWORD_STORAGE_KEY);
+            
+            if (savedPassword === CORRECT_PASSWORD) {
+                // Password correct, hide overlay and load app
+                document.getElementById('passwordOverlay').classList.add('hidden');
+                initializeApp();
+            }
+        }
+
+        function setupPasswordListener() {
+            const passwordInput = document.getElementById('passwordInput');
+            const passwordSubmit = document.getElementById('passwordSubmit');
+            const passwordError = document.getElementById('passwordError');
+
+            // Submit on Enter key
+            passwordInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    verifyPassword();
+                }
+            });
+
+            // Submit on button click
+            passwordSubmit.addEventListener('click', verifyPassword);
+
+            function verifyPassword() {
+                const enteredPassword = passwordInput.value;
+                
+                if (enteredPassword === CORRECT_PASSWORD) {
+                    // Save password to localStorage
+                    localStorage.setItem(PASSWORD_STORAGE_KEY, enteredPassword);
+                    
+                    // Hide overlay
+                    document.getElementById('passwordOverlay').classList.add('hidden');
+                    
+                    // Initialize app
+                    initializeApp();
+                } else {
+                    passwordError.textContent = 'Incorrect password. Try again.';
+                    passwordInput.value = '';
+                    passwordInput.focus();
+                }
+            }
+        }
+
+        function initializeApp() {
+            loadData();
+            setupEventListeners();
+        }
+
+        function setupEventListeners() {
+            document.getElementById('venueSelect').addEventListener('change', (e) => {
+                currentVenue = e.target.value;
+                filterAndDisplayData();
+            });
+
+            document.getElementById('refreshBtn').addEventListener('click', () => {
+                loadData();
+            });
+
+            document.getElementById('yesterdayBtn').addEventListener('click', () => {
+                setDateFilter('yesterday');
+            });
+
+            document.getElementById('todayBtn').addEventListener('click', () => {
+                setDateFilter('today');
+            });
+        }
+
+        function setDateFilter(date) {
+            currentDate = date;
+            document.querySelectorAll('.date-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(date + 'Btn').classList.add('active');
+            filterAndDisplayData();
+        }
+
+        async function loadData() {
+            const refreshBtn = document.getElementById('refreshBtn');
+            const metricsContainer = document.getElementById('metricsContainer');
+            const dataContainer = document.getElementById('dataContainer');
+            
+            refreshBtn.disabled = true;
+            refreshBtn.textContent = '⏳ Loading...';
+            
+            dataContainer.innerHTML = '<div class="loading"><div class="spinner"></div><p>Loading retention data...</p></div>';
+
+            try {
+                console.log('Fetching data from:', DATA_URL);
+                const response = await fetch(DATA_URL);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const result = await response.json();
+                console.log('API Response:', result);
+                
+                // Check for errors in the response
+                if (!result.success) {
+                    throw new Error(result.error || 'API returned an error');
+                }
+                
+                allData = result.data || [];
+                console.log('Total records loaded:', allData.length);
+                
+                if (allData.length === 0) {
+                    showError(`
+                        <strong>⚠️ No Data Found</strong><br><br>
+                        The API is working but returned no data.<br><br>
+                        <strong>Possible causes:</strong><br>
+                        • Empty Google Sheet<br>
+                        • Wrong sheet name in Apps Script<br>
+                        • Check the Apps Script logs for errors
+                    `);
+                    return;
+                }
+                
+                populateVenueDropdown();
+                filterAndDisplayData();
+                
+                document.getElementById('lastUpdated').textContent = 
+                    `Last updated: ${new Date().toLocaleString()}`;
+                
+            } catch (error) {
+                console.error('Error loading data:', error);
+                
+                let errorMessage = '<strong>❌ Failed to Load Data</strong><br><br>';
+                
+                if (error.message.includes('Failed to fetch')) {
+                    errorMessage += `
+                        <strong>Network/CORS Error</strong><br><br>
+                        Cannot reach the API endpoint.<br><br>
+                        <strong>Solutions:</strong><br>
+                        1. Check your internet connection<br>
+                        2. Verify Apps Script is deployed correctly<br>
+                        3. Try refreshing the page
+                    `;
+                } else {
+                    errorMessage += `<strong>Error:</strong> ${error.message}`;
+                }
+                
+                showError(errorMessage);
+            } finally {
+                refreshBtn.disabled = false;
+                refreshBtn.textContent = '🔄 Refresh';
+            }
+        }
+
+        function populateVenueDropdown() {
+            const venues = [...new Set(allData.map(d => d.venue_name))].sort();
+            const select = document.getElementById('venueSelect');
+            
+            select.innerHTML = '<option value="">All Venues</option>';
+            venues.forEach(venue => {
+                const option = document.createElement('option');
+                option.value = venue;
+                option.textContent = venue;
+                select.appendChild(option);
+            });
+
+            if (currentVenue && venues.includes(currentVenue)) {
+                select.value = currentVenue;
+            }
+        }
+
+        function filterAndDisplayData() {
+            // Get target date
+            const today = new Date();
+            if (currentDate === 'yesterday') {
+                today.setDate(today.getDate() - 1);
+            }
+            const targetDateStr = formatDate(today);
+
+            console.log('Filtering for date:', targetDateStr, 'venue:', currentVenue || 'All');
+
+            // Filter by venue and date
+            filteredData = allData.filter(d => {
+                const venueMatch = !currentVenue || d.venue_name === currentVenue;
+                const dateMatch = d.absent_date === targetDateStr;
+                return venueMatch && dateMatch;
+            });
+
+            console.log('Filtered records:', filteredData.length);
+
+            displayMetrics();
+            displayYouthTable();
+        }
+
+        function formatDate(date) {
+            const month = date.getMonth() + 1;
+            const day = date.getDate();
+            const year = date.getFullYear();
+            return `${month}/${day}/${year}`;
+        }
+
+        function displayMetrics() {
+            const metrics = calculateMetrics(filteredData);
+            
+            const html = `
+                <div class="metrics-grid">
+                    <div class="metric-card absent">
+                        <div class="metric-label">Youth Absent</div>
+                        <div class="metric-value">${metrics.totalAbsent}</div>
+                    </div>
+                    <div class="metric-card called">
+                        <div class="metric-label">Called</div>
+                        <div class="metric-value">${metrics.called}</div>
+                    </div>
+                    <div class="metric-card reached">
+                        <div class="metric-label">Reached</div>
+                        <div class="metric-value">${metrics.reached}</div>
+                    </div>
+                    <div class="metric-card promised">
+                        <div class="metric-label">Promised Return</div>
+                        <div class="metric-value">${metrics.promised}</div>
+                    </div>
+                    <div class="metric-card refused">
+                        <div class="metric-label">Refused Return</div>
+                        <div class="metric-value">${metrics.refused}</div>
+                    </div>
+                    <div class="metric-card returned">
+                        <div class="metric-label">Returned</div>
+                        <div class="metric-value">${metrics.returned}</div>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('metricsContainer').innerHTML = html;
+        }
+
+        function calculateMetrics(data) {
+            return {
+                totalAbsent: data.length,
+                called: data.filter(d => d.calls_made_today > 0).length,
+                reached: data.filter(d => d.calls_reached_today > 0).length,
+                promised: data.filter(d => d.promised_return_today > 0).length,
+                refused: data.filter(d => d.refused_return_today > 0).length,
+                returned: data.filter(d => d.returned_next_day > 0).length
+            };
+        }
+
+        function displayYouthTable() {
+            const container = document.getElementById('dataContainer');
+            
+            if (filteredData.length === 0) {
+                const dateText = currentDate === 'today' ? 'today' : 'yesterday';
+                const venueText = currentVenue || 'all venues';
+                
+                container.innerHTML = `
+                    <div class="data-section">
+                        <div class="empty-state">
+                            <div class="empty-state-icon">📋</div>
+                            <h3>No data available</h3>
+                            <p>No records found for ${venueText} on ${dateText}</p>
+                            <p style="margin-top: 10px; color: #666666;">Try selecting a different venue or date</p>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            const tableHtml = `
+                <div class="data-section">
+                    <div class="section-header">
+                        <h2 class="section-title">Youth Details (${filteredData.length})</h2>
+                        <input type="text" id="searchBox" class="search-box" placeholder="Search by name or ID...">
+                    </div>
+                    <table class="youth-table">
+                        <thead>
+                            <tr>
+                                <th>Youth ID</th>
+                                <th>Name</th>
+                                <th>Gender</th>
+                                <th>Calls Made</th>
+                                <th>Reached</th>
+                                <th>Latest Response</th>
+                                <th>Follow-up Status</th>
+                                <th>Returned</th>
+                            </tr>
+                        </thead>
+                        <tbody id="youthTableBody">
+                            ${renderTableRows(filteredData)}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            
+            container.innerHTML = tableHtml;
+
+            // Add search functionality
+            document.getElementById('searchBox').addEventListener('input', (e) => {
+                const searchTerm = e.target.value.toLowerCase();
+                const filtered = filteredData.filter(d => 
+                    d.youth_id.toLowerCase().includes(searchTerm) ||
+                    d.youth_name.toLowerCase().includes(searchTerm)
+                );
+                document.getElementById('youthTableBody').innerHTML = renderTableRows(filtered);
+            });
+        }
+
+        function renderTableRows(data) {
+            if (data.length === 0) {
+                return '<tr><td colspan="8" style="text-align: center; padding: 40px; color: #666666;">No matching youth found</td></tr>';
+            }
+
+            return data.map(youth => `
+                <tr>
+                    <td>
+                        <a href="${CALL_FORM_BASE_URL}${youth.youth_id}" 
+                           target="_blank" 
+                           class="youth-id-link"
+                           title="Open call form for ${youth.youth_name}">
+                            <strong>${youth.youth_id}</strong> 📞
+                        </a>
+                    </td>
+                    <td>${youth.youth_name}</td>
+                    <td>${youth.youth_gender}</td>
+                    <td>${youth.calls_made_today}</td>
+                    <td>${youth.calls_reached_today > 0 ? '✓' : '—'}</td>
+                    <td>
+                        ${youth.promised_return_today > 0 ? '<span class="status-badge status-promised">Promised</span>' : ''}
+                        ${youth.refused_return_today > 0 ? '<span class="status-badge status-refused">Refused</span>' : ''}
+                        ${!youth.promised_return_today && !youth.refused_return_today && youth.latest_response_today ? youth.latest_response_today : ''}
+                        ${!youth.promised_return_today && !youth.refused_return_today && !youth.latest_response_today ? '—' : ''}
+                    </td>
+                    <td><span class="status-badge status-${getStatusClass(youth.followup_status)}">${youth.followup_status}</span></td>
+                    <td>${youth.returned_next_day > 0 ? '<span class="status-badge status-returned">✓ Returned</span>' : '—'}</td>
+                </tr>
+            `).join('');
+        }
+
+        function getStatusClass(status) {
+            const statusMap = {
+                'Not Called': 'not-called',
+                'Called': 'called',
+                'Reached': 'reached',
+                'Promised': 'promised',
+                'Refused': 'refused',
+                'Returned': 'returned'
+            };
+            return statusMap[status] || 'not-called';
+        }
+
+        function showError(message) {
+            document.getElementById('metricsContainer').innerHTML = '';
+            document.getElementById('dataContainer').innerHTML = `
+                <div class="data-section">
+                    <div class="error">${message}</div>
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>
